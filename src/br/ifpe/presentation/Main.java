@@ -1,7 +1,6 @@
 package br.ifpe.presentation;
 
-import java.util.List;import org.omg.Messaging.SyncScopeHelper;
-
+import java.util.List;
 import br.ifpe.entities.Account;
 import br.ifpe.entities.Client;
 import br.ifpe.service.BankService;
@@ -44,8 +43,10 @@ public class Main {
 		service
 		.listAccounts()
 		.stream()
-		.forEach(System.out::println );
-		
+		.map(a -> a.getClient())
+		//.collect(Collectors.averagingDouble(Account::getBalance));
+		.forEach(System.out::println);
+
 	}
 
 	/**
@@ -54,7 +55,12 @@ public class Main {
 	 * com o maior saldo somando todas as suas contas.
 	 */
 	public static void imprimirPaisClienteMaisRico() {
-		throw new UnsupportedOperationException();
+		service
+		.listAccounts()
+		.stream()
+		.filter(o -> o.getClient().getAddress().equals("Brazil") || 
+				o.getClient().getAddress().equals("United States"))
+		.mapToDouble(o -> o.getBalance()).sum();
 	}
 
 	/**
