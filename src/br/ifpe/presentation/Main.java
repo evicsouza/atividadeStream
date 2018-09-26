@@ -68,14 +68,23 @@ public class Main {
 	 * @param agency
 	 */
 	public static void imprimirSaldoMedio(int agency) {
-		throw new UnsupportedOperationException();
+		service
+		.listAccounts()
+		.stream()
+		.mapToDouble(a -> a.getBalance()).average();
 	}
 
 	/**
 	 * 5. Imprime na tela o nome de todos os clientes que possuem conta poupança (tipo SAVING)
 	 */
 	public static void imprimirClientesComPoupanca() {
-		throw new UnsupportedOperationException();
+		service
+		.listAccounts()
+		.stream()
+		.filter(a -> a.getType().equals("SAVING"))
+		.map(a -> a.getClient())
+		.distinct()
+		.forEach(System.out::println);
 	}
 
 	/**
