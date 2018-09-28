@@ -1,6 +1,12 @@
 package br.ifpe.presentation;
 
+import java.util.ArrayList;
+import java.util.DoubleSummaryStatistics;
 import java.util.List;
+import java.util.OptionalDouble;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
+
 import br.ifpe.entities.Account;
 import br.ifpe.entities.Client;
 import br.ifpe.service.BankService;
@@ -30,7 +36,7 @@ public class Main {
 		service
 		.listClients()
 		.stream()
-		.map(c -> c.getName() + " - " + c.getEmail())
+		.map(client -> client.getName() + " - " + client.getEmail())
 		.distinct()
 		.forEach(System.out::println);
 	}
@@ -41,10 +47,13 @@ public class Main {
 	 */
 	public static void imprimirMediaSaldos() {
 		service
-		.listAccounts()
+		.listClients()
 		.stream()
-		.map(a -> a.getClient())
-		//.collect(Collectors.averagingDouble(Account::getBalance));
+		.map(client -> client.getName() + " - " + service.listAccounts()
+		.stream()
+		.filter(account -> account.getClient().getName().equals(client.getName()))
+		.mapToDouble(account -> account.getBalance())
+		.average().getAsDouble())
 		.forEach(System.out::println);
 
 	}
@@ -55,12 +64,23 @@ public class Main {
 	 * com o maior saldo somando todas as suas contas.
 	 */
 	public static void imprimirPaisClienteMaisRico() {
-		service
-		.listAccounts()
-		.stream()
-		.filter(o -> o.getClient().getAddress().equals("Brazil") || 
-				o.getClient().getAddress().equals("United States"))
-		.mapToDouble(o -> o.getBalance()).sum();
+		double sumClientBrazil =
+				service
+				.listAccounts()
+				.stream()
+				.filter(account -> account.getClient().getAddress().getCountry().equals("Brazil"))
+				.mapToDouble(account -> account.getBalance())
+				.sum();
+
+		double sumClientUSA = 
+				service
+				.listAccounts()
+				.stream()
+				.filter(account -> account.getClient().getAddress().getCountry().equals("United States"))
+				.mapToDouble(account -> account.getBalance())
+				.sum();
+
+		System.out.println(Double.compare(sumClientBrazil, sumClientUSA));
 	}
 
 	/**
@@ -68,10 +88,14 @@ public class Main {
 	 * @param agency
 	 */
 	public static void imprimirSaldoMedio(int agency) {
-		service
-		.listAccounts()
-		.stream()
-		.mapToDouble(a -> a.getBalance()).average();
+		OptionalDouble average =
+				service
+				.listAccounts()
+				.stream()
+				.filter(account -> account.getAgency() == agency)
+				.mapToDouble(account -> account.getBalance())
+				.average();
+		System.out.println(average);
 	}
 
 	/**
@@ -81,8 +105,8 @@ public class Main {
 		service
 		.listAccounts()
 		.stream()
-		.filter(a -> a.getType().equals("SAVING"))
-		.map(a -> a.getClient())
+		.filter(account -> account.getType().equals("SAVING"))
+		.map(account -> account.getClient())
 		.distinct()
 		.forEach(System.out::println);
 	}
@@ -93,7 +117,15 @@ public class Main {
 	 * @return Retorna uma lista de Strings com o "estado" de todos os clientes da agência
 	 */
 	public static List<String> getEstadoClientes(int agency) {
-		throw new UnsupportedOperationException();
+		List<String> stateOfAllAgencyClients =
+				service
+				.listAccounts()
+				.stream()
+				.filter(account -> account.getAgency() == agency)
+				.map(account -> account.getClient().getAddress().getState())
+				.collect(Collectors.toList());
+
+		return (List<String>) stateOfAllAgencyClients;
 	}
 
 	/**
@@ -102,7 +134,14 @@ public class Main {
 	 * @return Retorna uma lista de inteiros com os números das contas daquele país
 	 */
 	public static int[] getNumerosContas(String country) {
-		throw new UnsupportedOperationException();
+		int[] countryAccountNumbers =
+				service
+				.listAccounts()
+				.stream()
+				.filter(account -> account.getClient().getAddress().getCountry().equals(country))
+				.mapToInt(account -> account.getNumber()).toArray();
+
+		return countryAccountNumbers;
 	}
 
 	/**
@@ -112,7 +151,15 @@ public class Main {
 	 * @return
 	 */
 	public static double getMaiorSaldo(String clientEmail) {
-		throw new UnsupportedOperationException();
+		double sumBalance =
+				service
+				.listAccounts()
+				.stream()
+				.filter(account -> account.getClient().getEmail().equals(clientEmail))
+				.mapToDouble(account -> account.getBalance())
+				.sum();
+
+		return sumBalance;
 	}
 
 	/**
@@ -123,7 +170,11 @@ public class Main {
 	 * @param value
 	 */
 	public static void sacar(int agency, int number, double value) {
-		throw new UnsupportedOperationException();
+		service
+		.listAccounts()
+		.stream()
+		.filter(account -> account.getAgency() == agency && account.getNumber() == number)
+		.map(account -> account.getBalance() - value);
 	}
 
 	/**
@@ -132,7 +183,12 @@ public class Main {
 	 * @param value
 	 */
 	public static void depositar(String country, double value) {
-		throw new UnsupportedOperationException();
+		service
+		.listAccounts()
+		.stream()
+		.filter(account -> account.getClient().getAddress().getCountry().equals(country))
+		.map(account -> (account.getBalance() + value));
+
 	}
 
 	/**
@@ -143,7 +199,19 @@ public class Main {
 	 * @param value - valor da transferência
 	 */
 	public static void transferir(int agency, int numberSource, int numberTarget, double value) {
-		throw new UnsupportedOperationException();
+		service
+		.listAccounts()
+		.stream()
+		.filter(account -> (account.getAgency() == agency) && 
+				(account.getNumber() == numberSource))
+		.map(account -> (account.getBalance() - value));
+
+		service
+		.listAccounts()
+		.stream()
+		.filter(account -> (account.getAgency() == agency) && 
+				(account.getNumber() == numberTarget))
+		.map(account -> (account.getBalance() + value));
 	}
 
 	/**
@@ -152,7 +220,17 @@ public class Main {
 	 * @return Retorna uma lista com todas as contas conjuntas (JOINT) dos clientes
 	 */
 	public static List<Account> getContasConjuntas(List<Client> clients) {
-		throw new UnsupportedOperationException();
+		List<Account> jointAccounts = new ArrayList<Account>();
+		service
+		.listAccounts()
+		.stream()
+		.filter(account -> account.getClient().equals(clients))
+		.map(account -> account.getType().equals("JOINT"))
+		.collect(Collectors.toList());
+
+
+		return jointAccounts;
+
 	}
 
 	/**
@@ -161,7 +239,14 @@ public class Main {
 	 * @return Retorna uma lista com o somatório dos saldos de todas as contas do estado 
 	 */
 	public static double getSomaContasEstado(String state) {
-		throw new UnsupportedOperationException();	
+		DoubleSummaryStatistics sumOfTheBalancesOfTheStateAccount = 
+				service
+				.listAccounts()
+				.stream()
+				.filter(account -> account.getClient().getAddress().getState().equals(state))
+				.collect(Collectors.summarizingDouble(Account::getBalance));
+
+		return sumOfTheBalancesOfTheStateAccount.getSum();
 	}
 
 	/**
@@ -169,7 +254,15 @@ public class Main {
 	 * @return Retorna um array com os e-mails de todos os clientes que possuem contas conjuntas
 	 */
 	public static String[] getEmailsClientesContasConjuntas() {
-		throw new UnsupportedOperationException();
+		String [] emailsFromCustomersWithJointAccounts =
+				(String[]) service
+				.listAccounts()
+				.stream()
+				.filter(accounts -> accounts.getType().equals("JOINT"))
+				.map(accounts -> accounts.getClient().getEmail())
+				.toArray();
+
+		return emailsFromCustomersWithJointAccounts;
 	}
 
 	/**
@@ -178,15 +271,24 @@ public class Main {
 	 * @return Retorna se o número é primo ou não
 	 */
 	public static boolean isPrimo(int number) {
-		throw new UnsupportedOperationException();
+		return IntStream
+				.rangeClosed(2, (number/2))
+				.noneMatch(i -> number % i == 0);
 	}
 
 	/**
 	 * 16.
 	 * @param number
 	 * @return Retorna o fatorial do número
+	 * 
 	 */
 	public static int getFatorial(int number) {
-		throw new UnsupportedOperationException();
+		int factorial =
+				IntStream.rangeClosed(1, number)
+				.reduce((n1, n2) -> (n1*n2)).orElse(1);
+
+		return factorial;
+
+
 	}
 }
